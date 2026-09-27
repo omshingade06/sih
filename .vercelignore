@@ -1,0 +1,45 @@
+# Vercel Deployment Ignore
+# Prevents bloated serverless function bundles (>225MB limit)
+
+# Frontend node_modules & build assets
+frontend/node_modules/
+node_modules/
+*/node_modules/
+frontend/src/
+frontend/public/
+
+# Git and IDE configs
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test suites
+tests/
+backend/tests/
+*/tests/
+*test*.py
+
+# Python caches and virtual environments
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*.pyc
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Local database files
+*.sqlite
+*.sqlite3
+*.db
+
+# Documentation & large assets
+*.md
+!README.md
