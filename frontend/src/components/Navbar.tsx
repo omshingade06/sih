@@ -11,7 +11,8 @@ import {
   Ruler,
   LogOut,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  Menu
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QuickGuideModal } from './QuickGuideModal';
@@ -34,7 +35,8 @@ export const Navbar: React.FC = () => {
     switchRoleQuick,
     logout,
     theme,
-    toggleTheme
+    toggleTheme,
+    toggleMobileSidebar
   } = useApp();
 
   const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
@@ -61,17 +63,26 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="h-16 bg-[#1A1D20] border-b border-[#2E343A] px-4 flex items-center justify-between sticky top-0 z-40 shadow-xl transition-colors duration-200">
-        {/* Brand & Title */}
-        <div className="flex items-center space-x-3">
-          <Link to="/" className="flex items-center space-x-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#ED1C24] flex items-center justify-center font-black text-white text-base tracking-wider shadow-lg shadow-[#ED1C24]/20 group-hover:brightness-110 transition-all">
+      <header className="h-16 bg-[#1A1D20] border-b border-[#2E343A] px-2 sm:px-4 flex items-center justify-between sticky top-0 z-40 shadow-xl transition-colors duration-200">
+        {/* Brand & Mobile Hamburger Toggle */}
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* Mobile Hamburger Button */}
+          <button
+            onClick={toggleMobileSidebar}
+            className="lg:hidden p-2 rounded-xl bg-[#231F20] border border-[#2E343A] text-[#A0AAB2] hover:text-white hover:border-[#ED1C24] transition-all"
+            aria-label="Toggle Navigation Menu"
+          >
+            <Menu className="w-5 h-5 text-white" />
+          </button>
+
+          <Link to="/" className="flex items-center space-x-2 sm:space-x-2.5 group">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#ED1C24] flex items-center justify-center font-black text-white text-sm sm:text-base tracking-wider shadow-lg shadow-[#ED1C24]/20 group-hover:brightness-110 transition-all shrink-0">
               OIL
             </div>
             <div>
-              <div className="flex items-center space-x-1.5">
-                <span className="font-bold text-sm sm:text-base tracking-tight text-[#F5F6F8]">eRTMAC-NWIS</span>
-                <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-[#ED1C24]/20 text-[#ED1C24] border border-[#ED1C24]/30 font-bold">
+              <div className="flex items-center space-x-1 sm:space-x-1.5">
+                <span className="font-bold text-xs sm:text-base tracking-tight text-[#F5F6F8]">eRTMAC-NWIS</span>
+                <span className="hidden xs:inline text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-[#ED1C24]/20 text-[#ED1C24] border border-[#ED1C24]/30 font-bold">
                   DSS
                 </span>
               </div>

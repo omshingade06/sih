@@ -236,7 +236,7 @@ export const NearbyWellsPage: React.FC = () => {
       {/* Main Grid: GIS Map + Ranked Offset Well Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Interactive GIS Map (7 Cols) */}
-        <div className="lg:col-span-7 h-[620px] rounded-2xl overflow-hidden border border-[#2E343A] shadow-2xl relative">
+        <div className="lg:col-span-7 h-[380px] sm:h-[480px] lg:h-[620px] rounded-2xl overflow-hidden border border-[#2E343A] shadow-2xl relative">
           {activeWell && (
             <GisMap
               activeWell={activeWell}
@@ -249,7 +249,7 @@ export const NearbyWellsPage: React.FC = () => {
         </div>
 
         {/* Ranked Offset List & Selected Well Details (5 Cols) */}
-        <div className="lg:col-span-5 flex flex-col space-y-4 h-[620px]">
+        <div className="lg:col-span-5 flex flex-col space-y-4 h-auto lg:h-[620px]">
           {/* Selected Well Summary Card */}
           {selectedOffset ? (
             <div className="p-4 rounded-2xl bg-[#1A1D20] border border-[#2E343A] shadow-xl space-y-3 shrink-0">

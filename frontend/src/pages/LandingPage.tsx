@@ -22,34 +22,36 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#121416] text-[#F5F6F8] selection:bg-[#ED1C24] selection:text-white flex flex-col">
       {/* Top Header */}
-      <header className="h-16 border-b border-[#2E343A] bg-[#1A1D20]/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-md bg-[#ED1C24] flex items-center justify-center font-black text-white text-base tracking-wider shadow-lg shadow-[#ED1C24]/20">
+      <header className="h-16 border-b border-[#2E343A] bg-[#1A1D20]/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between sticky top-0 z-50">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-md bg-[#ED1C24] flex items-center justify-center font-black text-white text-sm sm:text-base tracking-wider shadow-lg shadow-[#ED1C24]/20 shrink-0">
             OIL
           </div>
           <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-bold text-base tracking-tight">eRTMAC-NWIS</span>
-              <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#ED1C24]/20 text-[#ED1C24] border border-[#ED1C24]/40 font-bold">
+            <div className="flex items-center space-x-1.5">
+              <span className="font-bold text-sm sm:text-base tracking-tight">eRTMAC-NWIS</span>
+              <span className="hidden xs:inline text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#ED1C24]/20 text-[#ED1C24] border border-[#ED1C24]/40 font-bold">
                 Oil India Limited
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <Link
             to="/login"
-            className="px-4 py-2 rounded-lg bg-[#231F20] hover:bg-[#2E343A] border border-[#2E343A] text-white text-xs font-semibold flex items-center space-x-1.5 transition-all"
+            className="px-2.5 sm:px-4 py-2 rounded-lg bg-[#231F20] hover:bg-[#2E343A] border border-[#2E343A] text-white text-xs font-semibold flex items-center space-x-1.5 transition-all"
           >
             <Lock className="w-3.5 h-3.5 text-[#ED1C24]" />
-            <span>Secure Sign In</span>
+            <span className="hidden xs:inline">Secure Sign In</span>
+            <span className="xs:hidden">Login</span>
           </Link>
           <Link
             to="/app"
-            className="px-5 py-2 rounded-lg bg-[#ED1C24] hover:bg-[#D01820] text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg shadow-[#ED1C24]/25 transition-all"
+            className="px-3 sm:px-5 py-2 rounded-lg bg-[#ED1C24] hover:bg-[#D01820] text-white text-xs font-bold flex items-center space-x-1 sm:space-x-1.5 shadow-lg shadow-[#ED1C24]/25 transition-all whitespace-nowrap"
           >
-            <span>Launch NWIS Command Center</span>
+            <span className="hidden sm:inline">Launch NWIS Command Center</span>
+            <span className="sm:hidden">Launch App</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>

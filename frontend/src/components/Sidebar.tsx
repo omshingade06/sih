@@ -7,22 +7,21 @@ import {
   Activity,
   AlertTriangle,
   Network,
-  FileText,
   BellRing,
-  BarChart3,
-  Bot,
   Settings,
   Home,
   History,
   Users,
   Download,
   FileCheck,
-  ShieldCheck
+  ShieldCheck,
+  Bot,
+  X
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Sidebar: React.FC = () => {
-  const { unreadAlertCount, userRole } = useApp();
+  const { unreadAlertCount, userRole, mobileSidebarOpen, setMobileSidebarOpen } = useApp();
 
   const coreModules = [
     { to: '/app', label: 'Command Center', desc: 'Real-time drilling digest & health', icon: LayoutDashboard, exact: true },
@@ -48,10 +47,10 @@ export const Sidebar: React.FC = () => {
     { to: '/app/settings', label: 'Settings & Reset', desc: 'Configuration & demo data reset', icon: Settings },
   ];
 
-  return (
-    <aside className="w-64 bg-[#1A1D20] border-r border-[#2E343A] flex flex-col justify-between shrink-0 h-[calc(100vh-4rem)] select-none">
+  const renderNavContent = () => (
+    <>
       {/* Navigation List */}
-      <div className="p-3 space-y-3 overflow-y-auto">
+      <div className="p-3 space-y-3 overflow-y-auto flex-1">
         {/* Core Operational Section */}
         <div className="space-y-1">
           <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#6C7781]">
@@ -65,6 +64,7 @@ export const Sidebar: React.FC = () => {
                 to={item.to}
                 end={item.exact}
                 title={item.desc}
+                onClick={() => setMobileSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                     isActive
@@ -102,6 +102,7 @@ export const Sidebar: React.FC = () => {
                 key={item.to}
                 to={item.to}
                 title={item.desc}
+                onClick={() => setMobileSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                     isActive
@@ -139,6 +140,7 @@ export const Sidebar: React.FC = () => {
                 key={item.to}
                 to={item.to}
                 title={item.desc}
+                onClick={() => setMobileSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
                     isActive
@@ -164,6 +166,7 @@ export const Sidebar: React.FC = () => {
       <div className="p-3 border-t border-[#2E343A] bg-[#15181B] space-y-2">
         <Link
           to="/"
+          onClick={() => setMobileSidebarOpen(false)}
           className="flex items-center justify-center space-x-2 w-full px-3 py-1.5 rounded-xl bg-[#231F20] border border-[#2E343A] text-[#A0AAB2] hover:text-white text-xs font-semibold transition-all"
         >
           <Home className="w-3.5 h-3.5" />
@@ -174,7 +177,51 @@ export const Sidebar: React.FC = () => {
           <div className="text-[9px] text-[#A0AAB2] font-mono">eRTMAC Proactive DSS</div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* 1. Desktop Persistent Sidebar */}
+      <aside className="hidden lg:flex w-64 bg-[#1A1D20] border-r border-[#2E343A] flex-col justify-between shrink-0 h-[calc(100vh-4rem)] select-none">
+        {renderNavContent()}
+      </aside>
+
+      {/* 2. Mobile / Tablet Sliding Drawer with Backdrop */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop Overlay */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative flex flex-col w-72 max-w-[85vw] bg-[#1A1D20] border-r border-[#2E343A] shadow-2xl h-full select-none z-10 animate-fadeIn">
+            {/* Drawer Header */}
+            <div className="h-16 px-4 border-b border-[#2E343A] flex items-center justify-between bg-[#15181B]">
+              <div className="flex items-center space-x-2">
+                <div className="w-7 h-7 rounded-lg bg-[#ED1C24] flex items-center justify-center font-black text-white text-xs">
+                  OIL
+                </div>
+                <span className="font-bold text-sm text-white">eRTMAC Navigation</span>
+              </div>
+              <button
+                onClick={() => setMobileSidebarOpen(false)}
+                className="p-1.5 rounded-lg bg-[#231F20] border border-[#2E343A] text-[#A0AAB2] hover:text-white"
+                aria-label="Close menu"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Navigation items */}
+            {renderNavContent()}
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

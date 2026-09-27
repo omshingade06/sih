@@ -82,19 +82,19 @@ export const AskNWISPage: React.FC = () => {
       </div>
 
       {/* Query Input Box */}
-      <div className="p-2 rounded-2xl bg-[#1A1D20] border border-[#2E343A] shadow-2xl flex items-center space-x-2">
+      <div className="p-2 rounded-2xl bg-[#1A1D20] border border-[#2E343A] shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleAsk()}
           placeholder="Ask anything about offset wells, formations, historical hazards, or SOP mitigations..."
-          className="flex-1 bg-transparent px-4 py-2.5 text-sm text-white placeholder-[#6C7781] focus:outline-none"
+          className="flex-1 bg-transparent px-4 py-2.5 text-xs sm:text-sm text-white placeholder-[#6C7781] focus:outline-none"
         />
         <button
           onClick={() => handleAsk()}
           disabled={loading}
-          className="px-5 py-2.5 rounded-xl bg-[#ED1C24] hover:bg-[#D01820] text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg shadow-[#ED1C24]/20 transition-all disabled:opacity-50"
+          className="px-5 py-2.5 rounded-xl bg-[#ED1C24] hover:bg-[#D01820] text-white text-xs font-bold flex items-center justify-center space-x-1.5 shadow-lg shadow-[#ED1C24]/20 transition-all disabled:opacity-50 shrink-0"
         >
           <Send className="w-4 h-4" />
           <span>{loading ? 'Searching Evidence...' : 'Ask Copilot'}</span>

@@ -90,15 +90,15 @@ export const KnowledgeGraphPage: React.FC = () => {
       {/* Main Grid: Interactive Graph Visualizer + Node Inspector */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Interactive SVG Network Graph (8 Cols) */}
-        <div className="lg:col-span-8 bg-[#1A1D20] border border-[#2E343A] rounded-2xl p-4 flex flex-col h-[580px] shadow-2xl relative overflow-hidden">
-          <div className="flex items-center justify-between pb-3 border-b border-[#2E343A] z-10">
+        <div className="lg:col-span-8 bg-[#1A1D20] border border-[#2E343A] rounded-2xl p-4 flex flex-col h-[420px] sm:h-[500px] lg:h-[580px] shadow-2xl relative overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#2E343A] z-10">
             <div className="flex items-center space-x-2">
               <span className="text-xs font-bold text-white uppercase">Visual Graph Topology</span>
               <span className="text-[10px] font-mono text-[#A0AAB2]">
                 ({filteredNodes.length} nodes, {graphData.edges.length} edges)
               </span>
             </div>
-            <div className="flex items-center space-x-2 text-[10px] font-mono">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
               <span className="text-[#ED1C24]">● Well</span>
               <span className="text-[#2D9CDB]">● Formation</span>
               <span className="text-[#FFC72C]">● Incident</span>
@@ -107,8 +107,8 @@ export const KnowledgeGraphPage: React.FC = () => {
           </div>
 
           {/* SVG Canvas with Interactive Circular Layout */}
-          <div className="flex-1 relative flex items-center justify-center overflow-auto">
-            <svg className="w-full h-full min-w-[500px] min-h-[460px]">
+          <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+            <svg viewBox="0 0 640 460" className="w-full h-full max-h-full">
               {/* Draw Edges */}
               {graphData.edges.map((edge, idx) => {
                 const sIdx = filteredNodes.findIndex((n) => n.id === edge.source);

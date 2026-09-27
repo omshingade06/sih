@@ -43,6 +43,9 @@ interface AppContextType {
   theme: 'dark' | 'light';
   toggleTheme: () => void;
   setTheme: (theme: 'dark' | 'light') => void;
+  mobileSidebarOpen: boolean;
+  setMobileSidebarOpen: (open: boolean) => void;
+  toggleMobileSidebar: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -85,7 +88,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlertModal, setSelectedAlertModal] = useState<Alert | null>(null);
   const [showManualDepthModal, setShowManualDepthModal] = useState<boolean>(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const toggleMobileSidebar = () => {
+    setMobileSidebarOpen((prev) => !prev);
+  };
 
   // Theme state: default 'dark'
   const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
@@ -397,7 +405,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         loading,
         theme,
         toggleTheme,
-        setTheme
+        setTheme,
+        mobileSidebarOpen,
+        setMobileSidebarOpen,
+        toggleMobileSidebar
       }}
     >
       {children}

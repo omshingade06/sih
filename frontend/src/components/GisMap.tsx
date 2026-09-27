@@ -70,9 +70,26 @@ export const GisMap: React.FC<GisMapProps> = ({
 
       layerGroupRef.current = L.layerGroup().addTo(map);
       mapInstanceRef.current = map;
+
+      // Invalidate size on initial mount
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 250);
+    }
+
+    const container = mapContainerRef.current;
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+
+    if (container) {
+      resizeObserver.observe(container);
     }
 
     return () => {
+      resizeObserver.disconnect();
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
