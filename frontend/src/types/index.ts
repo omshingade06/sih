@@ -1,3 +1,22 @@
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  full_name?: string;
+  role: 'ADMIN' | 'DRILLING_ENGINEER' | 'GEOLOGIST' | 'VIEWER';
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface AuthToken {
+  access_token: string;
+  token_type: string;
+  user_id: number;
+  username: string;
+  full_name: string;
+  role: string;
+}
+
 export interface WellSummary {
   well_id: number;
   UWI: string;
@@ -34,8 +53,8 @@ export interface Borehole {
     tvd: number;
     inclination: number;
     azimuth: number;
-    easting: number;
-    northing: number;
+    easting?: number;
+    northing?: number;
   }[];
 }
 
@@ -50,6 +69,8 @@ export interface FormationInterval {
   base_tvd: number;
   top_tvdss: number;
   base_tvdss: number;
+  verification_status?: string;
+  source_document?: string;
 }
 
 export interface Mitigation {
@@ -86,6 +107,7 @@ export interface DrillingIncident {
   source_document?: string;
   page_number?: number;
   timestamp?: string;
+  verification_status?: string;
   mitigations: Mitigation[];
 }
 
@@ -94,11 +116,26 @@ export interface WellDetail extends WellSummary {
   formation_intervals: FormationInterval[];
   incidents: DrillingIncident[];
   casing_program?: {
-    size: string;
+    section?: string;
+    size_in?: number;
     shoe_md: number;
-    weight: string;
-    grade: string;
+    shoe_tvd?: number;
+    size?: string;
+    weight?: string;
+    grade?: string;
   }[];
+}
+
+export interface DepthReading {
+  id: number;
+  well_id: number;
+  bit_depth: number;
+  depth_reference: string;
+  depth_unit: string;
+  source_type: string;
+  recorded_by: string;
+  recorded_at: string;
+  note?: string;
 }
 
 export interface Formation {
@@ -163,6 +200,16 @@ export interface TelemetryPoint {
   stream_source?: string;
 }
 
+export interface AlertReview {
+  id: number;
+  alert_id: number;
+  reviewer_id: string;
+  reviewer_name: string;
+  review_decision: string;
+  comments?: string;
+  reviewed_at: string;
+}
+
 export interface Alert {
   alert_id: number;
   well_id: number;
@@ -198,6 +245,10 @@ export interface Alert {
   status: 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED' | 'DISMISSED';
   created_at: string;
   acknowledged_by?: string;
+  notes?: string;
+  analysis_method?: string;
+  analysis_version?: string;
+  reviews?: AlertReview[];
 }
 
 export interface LookaheadSummary {
@@ -209,32 +260,51 @@ export interface LookaheadSummary {
   current_formation: string;
   target_formations: string[];
   current_eta_norm: number;
-  lookahead_eta_norm_end: number;
   overall_risk_score: number;
   overall_risk_category: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
   detected_hazards: any[];
-  hazard_summary_counts: Record<string, number>;
   why_risk_increased: string;
   offset_wells_evaluated: number;
   relevant_offsets_count: number;
 }
 
+export interface VerificationRecord {
+  id: number;
+  document_id: number;
+  extracted_field_id?: number;
+  reviewer_id: string;
+  reviewer_name: string;
+  original_value?: string;
+  corrected_value?: string;
+  review_status: string;
+  review_note?: string;
+  source_page: number;
+  reviewed_at: string;
+}
+
 export interface DocumentExtraction {
   id: number;
+  document_id: number;
+  field_group: string;
   entity_type: string;
   entity_key: string;
   entity_value: string;
+  normalized_value?: string;
+  unit?: string;
   confidence: number;
   page_number: number;
   source_snippet?: string;
   is_verified: boolean;
+  verification_status: string;
   verified_by?: string;
+  notes?: string;
 }
 
 export interface DocumentItem {
   id: number;
   well_id?: number;
   well_name?: string;
+  document_title?: string;
   filename: string;
   doc_type: string;
   file_size_bytes: number;
@@ -243,7 +313,28 @@ export interface DocumentItem {
   page_count: number;
   summary?: string;
   extraction_confidence: number;
+  uploaded_by?: string;
+  document_version?: string;
+  document_source?: string;
+  rejection_reason?: string;
+  verified_by?: string;
+  verified_at?: string;
   extractions: DocumentExtraction[];
+  verification_records?: VerificationRecord[];
+}
+
+export interface AuditLog {
+  id: number;
+  user_id: string;
+  user_name: string;
+  role: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  before_state?: Record<string, any>;
+  after_state?: Record<string, any>;
+  timestamp: string;
+  reason?: string;
 }
 
 export interface KnowledgeGraphData {

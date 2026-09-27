@@ -37,12 +37,19 @@ export const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
+          <Link
+            to="/login"
+            className="px-4 py-2 rounded-lg bg-[#231F20] hover:bg-[#2E343A] border border-[#2E343A] text-white text-xs font-semibold flex items-center space-x-1.5 transition-all"
+          >
+            <Lock className="w-3.5 h-3.5 text-[#ED1C24]" />
+            <span>Secure Sign In</span>
+          </Link>
           <Link
             to="/app"
             className="px-5 py-2 rounded-lg bg-[#ED1C24] hover:bg-[#D01820] text-white text-xs font-bold flex items-center space-x-1.5 shadow-lg shadow-[#ED1C24]/25 transition-all"
           >
-            <span>Launch NWIS Dashboard</span>
+            <span>Launch NWIS Command Center</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>

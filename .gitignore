@@ -19,8 +19,11 @@ build/
 # Environment variables & DB
 .env
 .env.local
+frontend/.env
 *.sqlite
 *.sqlite3
+*.db
+
 
 # IDE & OS
 .vscode/

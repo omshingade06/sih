@@ -156,9 +156,11 @@ export const ActiveWellPage: React.FC = () => {
               {activeWell?.casing_program?.map((csg, idx) => (
                 <div key={idx} className="p-2.5 rounded-lg bg-[#15181B] border border-[#2E343A] text-xs">
                   <div className="text-[10px] text-[#A0AAB2] uppercase">String {idx + 1}</div>
-                  <div className="font-bold text-white mt-0.5">{csg.size} Casing</div>
+                  <div className="font-bold text-white mt-0.5">{csg.section || csg.size || `${csg.size_in}" Casing`}</div>
                   <div className="text-[11px] font-mono text-[#2D9CDB] mt-1">Shoe: {csg.shoe_md} m</div>
-                  <div className="text-[10px] text-[#6C7781]">{csg.weight} ({csg.grade})</div>
+                  {(csg.weight || csg.grade) && (
+                    <div className="text-[10px] text-[#6C7781]">{csg.weight || ''} {csg.grade ? `(${csg.grade})` : ''}</div>
+                  )}
                 </div>
               ))}
             </div>

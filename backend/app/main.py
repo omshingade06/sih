@@ -9,7 +9,8 @@ from app.services.telemetry_simulator import simulator
 from app.api import (
     auth, wells, formations, incidents, mitigations,
     telemetry, hazards, alerts, documents,
-    knowledge_graph, ask_nwis, analytics
+    knowledge_graph, ask_nwis, analytics,
+    audit_logs, exports, admin
 )
 
 @asynccontextmanager
@@ -52,6 +53,9 @@ app.include_router(documents.router, prefix=settings.API_V1_STR)
 app.include_router(knowledge_graph.router, prefix=settings.API_V1_STR)
 app.include_router(ask_nwis.router, prefix=settings.API_V1_STR)
 app.include_router(analytics.router, prefix=settings.API_V1_STR)
+app.include_router(audit_logs.router, prefix=settings.API_V1_STR)
+app.include_router(exports.router, prefix=settings.API_V1_STR)
+app.include_router(admin.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

@@ -1,8 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { WellSummary, WellDetail, TelemetryPoint, Alert, LookaheadSummary } from '../types';
+import { WellSummary, WellDetail, TelemetryPoint, Alert, LookaheadSummary, User, AuthToken } from '../types';
 import { api } from '../services/api';
 
 interface AppContextType {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  userRole: string;
+  login: (tokenData: AuthToken) => void;
+  logout: () => void;
+  switchRoleQuick: (role: string) => void;
   wells: WellSummary[];
   activeWellId: number;
   activeWell: WellDetail | null;
@@ -16,6 +23,8 @@ interface AppContextType {
   alerts: Alert[];
   unreadAlertCount: number;
   selectedAlertModal: Alert | null;
+  showManualDepthModal: boolean;
+  setShowManualDepthModal: (show: boolean) => void;
   setSelectedAlertModal: (alert: Alert | null) => void;
   setActiveWellId: (id: number) => void;
   setLookaheadWindow: (meters: number) => void;
@@ -26,10 +35,11 @@ interface AppContextType {
   setSimulationSpeed: (speed: number) => Promise<void>;
   triggerAnomaly: (anomalyType: string) => Promise<void>;
   acknowledgeAlert: (alertId: number, notes?: string) => Promise<void>;
+  submitAlertReview: (alertId: number, decision: string, comments?: string) => Promise<void>;
+  updateBitDepthManual: (depth: number, ref?: string, unit?: string, note?: string) => Promise<void>;
+  refreshWells: () => Promise<void>;
   refreshLookahead: () => Promise<void>;
   loading: boolean;
-  userRole: string;
-  setUserRole: (role: string) => void;
   theme: 'dark' | 'light';
   toggleTheme: () => void;
   setTheme: (theme: 'dark' | 'light') => void;
@@ -38,6 +48,30 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Auth state
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('ertmac_token'));
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('ertmac_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return null;
+      }
+    }
+    // Default demo user: Drilling Engineer
+    return {
+      id: 2,
+      username: 'driller',
+      email: 'drilling.eng@oilindia.in',
+      full_name: 'Er. Rajesh Sarmah (RTDC Lead)',
+      role: 'DRILLING_ENGINEER',
+      is_active: true
+    };
+  });
+
+  const [userRole, setUserRole] = useState<string>(() => user?.role || 'DRILLING_ENGINEER');
+
   const [wells, setWells] = useState<WellSummary[]>([]);
   const [activeWellId, setActiveWellIdState] = useState<number>(1);
   const [activeWell, setActiveWell] = useState<WellDetail | null>(null);
@@ -50,10 +84,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [lookaheadSummary, setLookaheadSummary] = useState<LookaheadSummary | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlertModal, setSelectedAlertModal] = useState<Alert | null>(null);
+  const [showManualDepthModal, setShowManualDepthModal] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [userRole, setUserRole] = useState<string>('DRILLING_ENGINEER');
-  
-  // Theme state: default 'dark', persisted in localStorage
+
+  // Theme state: default 'dark'
   const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('ertmac_theme');
     return (saved === 'light' || saved === 'dark') ? saved : 'dark';
@@ -77,6 +111,53 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const setTheme = (newTheme: 'dark' | 'light') => {
     setThemeState(newTheme);
+  };
+
+  // Login handler
+  const login = (tokenData: AuthToken) => {
+    setToken(tokenData.access_token);
+    localStorage.setItem('ertmac_token', tokenData.access_token);
+    const usr: User = {
+      id: tokenData.user_id,
+      username: tokenData.username,
+      email: `${tokenData.username}@oilindia.in`,
+      full_name: tokenData.full_name,
+      role: tokenData.role as any,
+      is_active: true
+    };
+    setUser(usr);
+    setUserRole(tokenData.role);
+    localStorage.setItem('ertmac_user', JSON.stringify(usr));
+  };
+
+  // Logout handler
+  const logout = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('ertmac_token');
+    localStorage.removeItem('ertmac_user');
+  };
+
+  // Fast demo role switch
+  const switchRoleQuick = (newRole: string) => {
+    const roleMap: Record<string, { username: string; name: string; email: string }> = {
+      ADMIN: { username: 'admin', name: 'Chief Drilling Engineer (Admin)', email: 'admin@oilindia.in' },
+      DRILLING_ENGINEER: { username: 'driller', name: 'Er. Rajesh Sarmah (RTDC Lead)', email: 'drilling.eng@oilindia.in' },
+      GEOLOGIST: { username: 'geologist', name: 'Dr. Ananya Dutta (Senior Geoscientist)', email: 'geology.ops@oilindia.in' },
+      VIEWER: { username: 'viewer', name: 'Operations Stakeholder (Observer)', email: 'viewer@oilindia.in' }
+    };
+    const mapped = roleMap[newRole] || roleMap.DRILLING_ENGINEER;
+    const usr: User = {
+      id: 1,
+      username: mapped.username,
+      email: mapped.email,
+      full_name: mapped.name,
+      role: newRole as any,
+      is_active: true
+    };
+    setUser(usr);
+    setUserRole(newRole);
+    localStorage.setItem('ertmac_user', JSON.stringify(usr));
   };
 
   // Load initial wells and active well
@@ -103,6 +184,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     loadWellsAndActive(activeWellId);
   }, [activeWellId, loadWellsAndActive]);
+
+  const refreshWells = async () => {
+    try {
+      const data = await api.getWells();
+      setWells(data);
+      if (activeWellId) {
+        const single = await api.getWell(activeWellId);
+        setActiveWell(single);
+      }
+    } catch (e) {
+      console.error('Failed to refresh wells', e);
+    }
+  };
 
   const setActiveWellId = (id: number) => {
     setActiveWellIdState(id);
@@ -225,10 +319,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const acknowledgeAlert = async (alertId: number, notes?: string) => {
-    await api.acknowledgeAlert(alertId, 'Er. Rajesh Sarmah (RTDC Lead)', notes);
+    const reviewer = user?.full_name || 'Drilling Engineer';
+    await api.acknowledgeAlert(alertId, reviewer, notes);
     setAlerts((prev) =>
-      prev.map((a) => (a.alert_id === alertId ? { ...a, status: 'ACKNOWLEDGED', acknowledged_by: 'Er. Rajesh Sarmah' } : a))
+      prev.map((a) => (a.alert_id === alertId ? { ...a, status: 'ACKNOWLEDGED', acknowledged_by: reviewer } : a))
     );
+  };
+
+  const submitAlertReview = async (alertId: number, decision: string, comments?: string) => {
+    const reviewer = user?.full_name || 'Drilling Engineer';
+    await api.submitAlertReview(alertId, {
+      review_decision: decision,
+      comments,
+      reviewer_name: reviewer
+    });
+    setAlerts((prev) =>
+      prev.map((a) => (a.alert_id === alertId ? { ...a, status: decision.includes('NOT') ? 'DISMISSED' : 'ACKNOWLEDGED', acknowledged_by: reviewer } : a))
+    );
+  };
+
+  const updateBitDepthManual = async (depth: number, ref?: string, unit?: string, note?: string) => {
+    const reviewer = user?.full_name || 'Drilling Engineer';
+    await api.enterManualDepth(activeWellId, {
+      bit_depth: depth,
+      depth_reference: ref || 'MD',
+      depth_unit: unit || 'm',
+      note,
+      recorded_by: reviewer
+    });
+    // Refresh active well and lookahead
+    const updated = await api.getWell(activeWellId);
+    setActiveWell(updated);
+    refreshLookahead();
   };
 
   const unreadAlertCount = alerts.filter((a) => a.status === 'ACTIVE').length;
@@ -236,6 +358,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider
       value={{
+        user,
+        token,
+        isAuthenticated: !!user,
+        userRole,
+        login,
+        logout,
+        switchRoleQuick,
         wells,
         activeWellId,
         activeWell,
@@ -249,6 +378,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         alerts,
         unreadAlertCount,
         selectedAlertModal,
+        showManualDepthModal,
+        setShowManualDepthModal,
         setSelectedAlertModal,
         setActiveWellId,
         setLookaheadWindow,
@@ -259,10 +390,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setSimulationSpeed,
         triggerAnomaly,
         acknowledgeAlert,
+        submitAlertReview,
+        updateBitDepthManual,
+        refreshWells,
         refreshLookahead,
         loading,
-        userRole,
-        setUserRole,
         theme,
         toggleTheme,
         setTheme

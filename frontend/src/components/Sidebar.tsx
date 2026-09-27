@@ -12,32 +12,44 @@ import {
   BarChart3,
   Bot,
   Settings,
-  Home
+  Home,
+  History,
+  Users,
+  Download,
+  FileCheck,
+  ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export const Sidebar: React.FC = () => {
-  const { unreadAlertCount } = useApp();
+  const { unreadAlertCount, userRole } = useApp();
 
   const coreModules = [
-    { to: '/app', label: 'Command Center', desc: 'Real-time drilling digest & live health', icon: LayoutDashboard, exact: true },
+    { to: '/app', label: 'Command Center', desc: 'Real-time drilling digest & health', icon: LayoutDashboard, exact: true },
     { to: '/app/hazards', label: 'Look-Ahead Radar', desc: 'Predict hazards in next 50m of rock', icon: AlertTriangle },
-    { to: '/app/alerts', label: 'Alert Center', desc: 'SOP mitigations & engineer sign-offs', icon: BellRing, badge: unreadAlertCount },
+    { to: '/app/alerts', label: 'Alert Center', desc: 'SOP mitigations & sign-offs', icon: BellRing, badge: unreadAlertCount },
     { to: '/app/telemetry', label: 'Live eRTMAC Stream', desc: 'High-frequency sensor tracks (SPP, WOB)', icon: Activity },
   ];
 
   const intelligenceModules = [
+    { to: '/app/wells', label: 'Well Portfolio', desc: 'Well registry & 7-tab history', icon: Compass },
     { to: '/app/nearby-wells', label: 'Nearby Offset GIS', desc: 'Spatial & geological similarity matching', icon: MapPin },
-    { to: '/app/active-well', label: 'Active Well 3D/Log', desc: 'Wellbore trajectory & formation tops', icon: Compass },
-    { to: '/app/knowledge-graph', label: 'Knowledge Graph', desc: 'Interactive ontology of hazards & SOPs', icon: Network },
-    { to: '/app/documents', label: 'Document Hub', desc: 'OCR parsing of WCR & DDR reports', icon: FileText },
-    { to: '/app/analytics', label: 'Analytics & NPT', desc: 'NPT prevention metrics & ROI', icon: BarChart3 },
-    { to: '/app/ask-nwis', label: 'Ask NWIS Copilot', desc: 'AI RAG assistant for offset queries', icon: Bot, isAi: true },
-    { to: '/app/settings', label: 'Settings', desc: 'Thresholds & telemetry streaming controls', icon: Settings },
+    { to: '/app/active-well', label: 'Active Well 3D/Log', desc: 'Wellbore trajectory & formation tops', icon: LayersIcon },
+    { to: '/app/documents', label: 'Verification Center', desc: 'Split-screen OCR & human review', icon: FileCheck },
+    { to: '/app/historical', label: 'Historical Retrieval', desc: 'Search past loss & sticking cases', icon: History },
+    { to: '/app/knowledge-graph', label: 'Knowledge Graph', desc: 'Ontology of hazards & SOPs', icon: Network },
+    { to: '/app/ask-nwis', label: 'Ask NWIS Copilot', desc: 'Grounded RAG offset query agent', icon: Bot, isAi: true },
+    { to: '/app/exports', label: 'Reports & Exports', desc: 'Download CSV & verification records', icon: Download },
+  ];
+
+  const governanceModules = [
+    { to: '/app/audit-logs', label: 'Audit Trail', desc: 'Immutable action ledger', icon: ShieldCheck },
+    ...(userRole === 'ADMIN' ? [{ to: '/app/users', label: 'User Management', desc: 'Manage access & roles', icon: Users }] : []),
+    { to: '/app/settings', label: 'Settings & Reset', desc: 'Configuration & demo data reset', icon: Settings },
   ];
 
   return (
-    <aside className="w-64 bg-[#1A1D20] border-r border-[#2E343A] flex flex-col justify-between shrink-0 h-[calc(100vh-4rem)]">
+    <aside className="w-64 bg-[#1A1D20] border-r border-[#2E343A] flex flex-col justify-between shrink-0 h-[calc(100vh-4rem)] select-none">
       {/* Navigation List */}
       <div className="p-3 space-y-3 overflow-y-auto">
         {/* Core Operational Section */}
@@ -78,10 +90,10 @@ export const Sidebar: React.FC = () => {
           })}
         </div>
 
-        {/* Intelligence & Data Section */}
+        {/* Intelligence & Verification Section */}
         <div className="space-y-1 pt-1 border-t border-[#2E343A]/60">
           <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#6C7781]">
-            Offset Intelligence &amp; AI
+            Offset Intelligence &amp; Verification
           </div>
           {intelligenceModules.map((item) => {
             const Icon = item.icon;
@@ -114,16 +126,48 @@ export const Sidebar: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Governance Section */}
+        <div className="space-y-1 pt-1 border-t border-[#2E343A]/60">
+          <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#6C7781]">
+            Governance &amp; Settings
+          </div>
+          {governanceModules.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                title={item.desc}
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'bg-[#ED1C24] text-white shadow-md shadow-[#ED1C24]/20'
+                      : 'text-[#A0AAB2] hover:bg-[#231F20] hover:text-[#F5F6F8]'
+                  }`
+                }
+              >
+                <div className="flex items-center space-x-2.5 truncate">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <div className="truncate">
+                    <div className="leading-tight truncate">{item.label}</div>
+                    <div className="text-[9px] opacity-70 font-normal truncate">{item.desc}</div>
+                  </div>
+                </div>
+              </NavLink>
+            );
+          })}
+        </div>
       </div>
 
       {/* Footer */}
       <div className="p-3 border-t border-[#2E343A] bg-[#15181B] space-y-2">
         <Link
           to="/"
-          className="flex items-center justify-center space-x-2 w-full px-3 py-1.5 rounded-lg bg-[#231F20] border border-[#2E343A] text-[#A0AAB2] hover:text-white text-xs font-semibold transition-all"
+          className="flex items-center justify-center space-x-2 w-full px-3 py-1.5 rounded-xl bg-[#231F20] border border-[#2E343A] text-[#A0AAB2] hover:text-white text-xs font-semibold transition-all"
         >
           <Home className="w-3.5 h-3.5" />
-          <span>Home / Architecture Flow</span>
+          <span>Home / Public Flow</span>
         </Link>
         <div className="px-1 text-center">
           <div className="text-[10px] text-[#6C7781] font-semibold">Oil India Limited (OIL)</div>
@@ -133,3 +177,9 @@ export const Sidebar: React.FC = () => {
     </aside>
   );
 };
+
+const LayersIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+  </svg>
+);

@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { OffsetWellSimilarity } from '../types';
 import { useApp } from '../context/AppContext';
+import { Layers, Globe, Eye } from 'lucide-react';
 
 interface GisMapProps {
   activeWell: {
@@ -17,6 +18,10 @@ interface GisMapProps {
   selectedWellId?: number;
 }
 
+type BasemapStyle = 'dark' | 'satellite' | 'voyager' | 'terrain';
+
+const BASEMAP_API_KEY = import.meta.env.VITE_BASEMAP_API_KEY || 'cb1_401j_1_085755de5fa33453143523cc';
+
 export const GisMap: React.FC<GisMapProps> = ({
   activeWell,
   offsetWells,
@@ -29,6 +34,21 @@ export const GisMap: React.FC<GisMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
+  const [mapStyle, setMapStyle] = useState<BasemapStyle>(theme === 'dark' ? 'dark' : 'voyager');
+
+  const getTileUrl = (style: BasemapStyle) => {
+    switch (style) {
+      case 'satellite':
+        return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}`;
+      case 'terrain':
+        return `https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png`;
+      case 'voyager':
+        return `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png`;
+      case 'dark':
+      default:
+        return `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?api_key=${BASEMAP_API_KEY}`;
+    }
+  };
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -41,10 +61,7 @@ export const GisMap: React.FC<GisMapProps> = ({
         attributionControl: false
       });
 
-      const tileUrl =
-        theme === 'dark'
-          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+      const tileUrl = getTileUrl(mapStyle);
 
       tileLayerRef.current = L.tileLayer(tileUrl, {
         maxZoom: 19,
@@ -63,7 +80,7 @@ export const GisMap: React.FC<GisMapProps> = ({
     };
   }, []);
 
-  // Update tile layer on theme change
+  // Update tile layer on mapStyle change
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -72,16 +89,13 @@ export const GisMap: React.FC<GisMapProps> = ({
       map.removeLayer(tileLayerRef.current);
     }
 
-    const tileUrl =
-      theme === 'dark'
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    const tileUrl = getTileUrl(mapStyle);
 
     tileLayerRef.current = L.tileLayer(tileUrl, {
       maxZoom: 19,
       subdomains: 'abcd'
     }).addTo(map);
-  }, [theme]);
+  }, [mapStyle]);
 
   // Update markers and layers when props change
   useEffect(() => {
@@ -214,9 +228,42 @@ export const GisMap: React.FC<GisMapProps> = ({
     <div className="w-full h-full relative rounded-xl overflow-hidden border border-[#2E343A] shadow-2xl">
       <div ref={mapContainerRef} className="w-full h-full" />
       
-      {/* Floating Map Legend */}
-      <div className="absolute bottom-3 left-3 z-[1000] bg-[#1A1D20]/90 backdrop-blur-md border border-[#2E343A] p-2.5 rounded-lg text-xs space-y-1.5 shadow-xl">
-        <div className="text-[10px] font-bold text-[#A0AAB2] uppercase">Similarity Index (S_ij)</div>
+      {/* Floating Layer Switcher & Basemap API Indicator */}
+      <div className="absolute top-3 right-3 z-[1000] flex items-center space-x-1.5 bg-[#1A1D20]/95 backdrop-blur-md border border-[#2E343A] p-1.5 rounded-xl shadow-2xl">
+        <div className="flex items-center space-x-1 px-2 py-0.5 border-r border-[#2E343A] mr-1 hidden sm:flex">
+          <Globe className="w-3.5 h-3.5 text-[#2D9CDB]" />
+          <span className="text-[10px] font-bold text-white uppercase">Basemap:</span>
+        </div>
+        {[
+          { id: 'dark', label: 'Dark', icon: '🌑' },
+          { id: 'satellite', label: 'Satellite', icon: '🛰️' },
+          { id: 'terrain', label: 'Topo', icon: '⛰️' },
+          { id: 'voyager', label: 'Street', icon: '🗺️' }
+        ].map((layer) => (
+          <button
+            key={layer.id}
+            onClick={() => setMapStyle(layer.id as BasemapStyle)}
+            className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center space-x-1 ${
+              mapStyle === layer.id
+                ? 'bg-[#ED1C24] text-white shadow-md'
+                : 'text-[#A0AAB2] hover:text-white hover:bg-[#231F20]'
+            }`}
+            title={`Switch to ${layer.label} basemap`}
+          >
+            <span>{layer.icon}</span>
+            <span className="hidden md:inline">{layer.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Floating Map Legend & API Key Connected Badge */}
+      <div className="absolute bottom-3 left-3 z-[1000] bg-[#1A1D20]/90 backdrop-blur-md border border-[#2E343A] p-2.5 rounded-xl text-xs space-y-1.5 shadow-xl">
+        <div className="flex items-center justify-between gap-2 border-b border-[#2E343A] pb-1 mb-1">
+          <span className="text-[10px] font-bold text-[#A0AAB2] uppercase">Similarity Index (S_ij)</span>
+          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-[#27AE60] border border-[#27AE60]/30">
+            GIS API Active
+          </span>
+        </div>
         <div className="flex items-center space-x-2">
           <span className="w-2.5 h-2.5 rounded-full bg-[#27AE60]"></span>
           <span>High Relevance (&gt;80%)</span>
