@@ -1,0 +1,9 @@
+[project]
+name = "ertmac-nwis"
+version = "1.0.0"
+description = "Nearby Wells Intelligence System (eRTMAC-NWIS)"
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.vercel]
+entrypoint = "backend.app.main:app"
