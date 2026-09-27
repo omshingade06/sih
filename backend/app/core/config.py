@@ -11,7 +11,12 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     
     # SQLite default for instant zero-config prototype run, PostgreSQL ready
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./ertmac_nwis.db")
+    # On Vercel serverless, only /tmp is writable
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "sqlite:////tmp/ertmac_nwis.db" if os.getenv("VERCEL") else "sqlite:///./ertmac_nwis.db"
+    )
+
     
     # Simulation defaults
     DEFAULT_LOOKAHEAD_METERS: float = 50.0

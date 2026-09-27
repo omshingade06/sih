@@ -1,5 +1,14 @@
+import sys
+import os
 import asyncio
+from pathlib import Path
 from contextlib import asynccontextmanager
+
+# Ensure backend root is in sys.path for Vercel serverless functions
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
@@ -15,14 +24,27 @@ from app.api import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Ensure tables exist and seed demo data
-    Base.metadata.create_all(bind=engine)
-    seed_database()
-    # Start telemetry simulator broadcast task in background
-    sim_task = asyncio.create_task(simulator.broadcast_loop())
+    # Startup: Ensure tables exist and seed demo data safely
+    try:
+        Base.metadata.create_all(bind=engine)
+        seed_database()
+    except Exception as e:
+        print(f"Warning during DB startup initialization: {e}")
+
+    # Start telemetry simulator broadcast task only in long-running servers (not serverless lambda)
+    sim_task = None
+    if not os.getenv("VERCEL"):
+        try:
+            sim_task = asyncio.create_task(simulator.broadcast_loop())
+        except Exception as e:
+            print(f"Simulator task skipped: {e}")
+
     yield
+
     # Shutdown
-    sim_task.cancel()
+    if sim_task:
+        sim_task.cancel()
+
 
 app = FastAPI(
     title="eRTMAC-NWIS API",
