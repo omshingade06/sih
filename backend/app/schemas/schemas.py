@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
-# Auth Schemas
+# ==================== Auth & User Schemas ====================
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -15,6 +15,20 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+    full_name: Optional[str] = None
+    role: str = "DRILLING_ENGINEER"
+
+class UserUpdate(BaseModel):
+    email: Optional[str] = None
+    full_name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+    password: Optional[str] = None
+
 class UserResponse(BaseModel):
     id: int
     username: str
@@ -22,8 +36,12 @@ class UserResponse(BaseModel):
     full_name: Optional[str]
     role: str
     is_active: bool
+    created_at: Optional[datetime] = None
 
-# Borehole Schemas
+    class Config:
+        from_attributes = True
+
+# ==================== Borehole Schemas ====================
 class BoreholeBase(BaseModel):
     borehole_id: int
     well_id: int
@@ -36,7 +54,7 @@ class BoreholeBase(BaseModel):
     class Config:
         from_attributes = True
 
-# Formation Interval Schemas
+# ==================== Formation Interval Schemas ====================
 class WellFormationIntervalSchema(BaseModel):
     id: int
     formation_id: int
@@ -48,11 +66,27 @@ class WellFormationIntervalSchema(BaseModel):
     base_tvd: float
     top_tvdss: float
     base_tvdss: float
+    verification_status: Optional[str] = "VERIFIED"
+    source_document: Optional[str] = None
 
     class Config:
         from_attributes = True
 
-# Mitigation Schemas
+class GeologicalCalculationRequest(BaseModel):
+    tvd: float
+    kb_elevation: float
+    top_tvdss: float
+    base_tvdss: float
+
+class GeologicalCalculationResponse(BaseModel):
+    tvd: float
+    kb_elevation: float
+    tvdss: float
+    eta_norm: float
+    is_valid: bool
+    status_message: str
+
+# ==================== Mitigation Schemas ====================
 class MitigationSchema(BaseModel):
     mitigation_id: int
     incident_id: int
@@ -68,7 +102,7 @@ class MitigationSchema(BaseModel):
     class Config:
         from_attributes = True
 
-# Incident Schemas
+# ==================== Incident Schemas ====================
 class IncidentSchema(BaseModel):
     incident_id: int
     well_id: int
@@ -90,12 +124,13 @@ class IncidentSchema(BaseModel):
     source_document: Optional[str] = None
     page_number: Optional[int] = 1
     timestamp: Optional[str] = None
+    verification_status: Optional[str] = "VERIFIED"
     mitigations: List[MitigationSchema] = []
 
     class Config:
         from_attributes = True
 
-# Well Schemas
+# ==================== Well Schemas ====================
 class WellSummarySchema(BaseModel):
     well_id: int
     UWI: str
@@ -128,7 +163,65 @@ class WellDetailSchema(WellSummarySchema):
     incidents: List[IncidentSchema] = []
     casing_program: Optional[Any] = None
 
-# Formation Schemas
+class WellCreateRequest(BaseModel):
+    UWI: str
+    well_name: str
+    field_name: str
+    basin: Optional[str] = "Upper Assam Basin"
+    operator: Optional[str] = "Oil India Limited (OIL)"
+    latitude: float
+    longitude: float
+    total_depth_md: float
+    total_depth_tvd: float
+    KB_elevation: Optional[float] = 112.5
+    spud_date: Optional[str] = None
+    rig_id: Optional[str] = "OIL-RIG-14"
+    status: Optional[str] = "ACTIVE"
+    well_type: Optional[str] = "DEVELOPMENT"
+    trajectory_type: Optional[str] = "DIRECTIONAL"
+    mud_system: Optional[str] = "WBM Potassium Chloride Polymer"
+    current_bit_depth_md: Optional[float] = 0.0
+    current_bit_depth_tvd: Optional[float] = 0.0
+
+class WellUpdateRequest(BaseModel):
+    well_name: Optional[str] = None
+    field_name: Optional[str] = None
+    basin: Optional[str] = None
+    operator: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    total_depth_md: Optional[float] = None
+    total_depth_tvd: Optional[float] = None
+    KB_elevation: Optional[float] = None
+    status: Optional[str] = None
+    well_type: Optional[str] = None
+    trajectory_type: Optional[str] = None
+    mud_system: Optional[str] = None
+    current_bit_depth_md: Optional[float] = None
+    current_bit_depth_tvd: Optional[float] = None
+
+class ManualDepthInputRequest(BaseModel):
+    bit_depth: float
+    depth_reference: str = "MD"  # MD, TVD, TVDSS
+    depth_unit: str = "m"
+    note: Optional[str] = None
+    recorded_by: Optional[str] = "Drilling Engineer"
+
+class DepthReadingSchema(BaseModel):
+    id: int
+    well_id: int
+    bit_depth: float
+    depth_reference: str
+    depth_unit: str
+    source_type: str
+    recorded_by: str
+    recorded_at: datetime
+    note: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# ==================== Formation Schemas ====================
 class FormationSchema(BaseModel):
     formation_id: int
     name: str
@@ -145,7 +238,7 @@ class FormationSchema(BaseModel):
     class Config:
         from_attributes = True
 
-# Offset Well Similarity Schemas
+# ==================== Offset Well Similarity Schemas ====================
 class OffsetWellSimilarity(BaseModel):
     well_id: int
     UWI: str
@@ -172,7 +265,7 @@ class SimilarityWeights(BaseModel):
     weight_architecture: float = 0.15
     max_radius_km: float = 25.0
 
-# Telemetry Schemas
+# ==================== Telemetry Schemas ====================
 class TelemetryPoint(BaseModel):
     timestamp: datetime
     well_id: int
@@ -203,7 +296,24 @@ class TelemetryStreamControl(BaseModel):
     speed_multiplier: Optional[float] = 1.0
     anomaly_type: Optional[str] = None
 
-# Alert Schemas
+# ==================== Alert & Review Schemas ====================
+class AlertReviewSchema(BaseModel):
+    id: int
+    alert_id: int
+    reviewer_id: str
+    reviewer_name: str
+    review_decision: str
+    comments: Optional[str] = None
+    reviewed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AlertReviewCreateRequest(BaseModel):
+    review_decision: str  # CONFIRMED_RELEVANT, NOT_RELEVANT, FLAGGED_INCORRECT, REVIEWED, ESCALATED
+    comments: Optional[str] = None
+    reviewer_name: Optional[str] = "Er. Rajesh Sarmah (RTDC Lead)"
+
 class AlertSchema(BaseModel):
     alert_id: int
     well_id: int
@@ -223,6 +333,10 @@ class AlertSchema(BaseModel):
     status: str
     created_at: datetime
     acknowledged_by: Optional[str] = None
+    notes: Optional[str] = None
+    analysis_method: Optional[str] = "4-Factor Offset Spatial-Stratigraphic Analysis"
+    analysis_version: Optional[str] = "v1.4.2"
+    reviews: List[AlertReviewSchema] = []
 
     class Config:
         from_attributes = True
@@ -232,7 +346,7 @@ class AlertAcknowledgeRequest(BaseModel):
     status: str = "ACKNOWLEDGED"
     notes: Optional[str] = None
 
-# Look-Ahead & Hazard Prediction Schemas
+# ==================== Look-Ahead Hazard Prediction Schemas ====================
 class LookaheadHazardSummary(BaseModel):
     current_depth_md: float
     current_depth_tvdss: float
@@ -249,17 +363,39 @@ class LookaheadHazardSummary(BaseModel):
     offset_wells_evaluated: int
     relevant_offsets_count: int
 
-# Document Schemas
+# ==================== Document & Verification Schemas ====================
+class VerificationRecordSchema(BaseModel):
+    id: int
+    document_id: int
+    extracted_field_id: Optional[int] = None
+    reviewer_id: str
+    reviewer_name: str
+    original_value: Optional[str] = None
+    corrected_value: Optional[str] = None
+    review_status: str
+    review_note: Optional[str] = None
+    source_page: int
+    reviewed_at: datetime
+
+    class Config:
+        from_attributes = True
+
 class DocumentExtractionSchema(BaseModel):
     id: int
+    document_id: int
+    field_group: str = "WELL_METADATA"
     entity_type: str
     entity_key: str
     entity_value: str
+    normalized_value: Optional[str] = None
+    unit: Optional[str] = None
     confidence: float
     page_number: int
     source_snippet: Optional[str] = None
     is_verified: bool = False
+    verification_status: str = "NOT_REVIEWED"
     verified_by: Optional[str] = None
+    notes: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -268,6 +404,7 @@ class DocumentSchema(BaseModel):
     id: int
     well_id: Optional[int] = None
     well_name: Optional[str] = None
+    document_title: Optional[str] = None
     filename: str
     doc_type: str
     file_size_bytes: int
@@ -276,7 +413,14 @@ class DocumentSchema(BaseModel):
     page_count: int
     summary: Optional[str] = None
     extraction_confidence: float
+    uploaded_by: Optional[str] = "Data Ingestion Pipeline"
+    document_version: Optional[str] = "1.0"
+    document_source: Optional[str] = "Oil India Limited (OIL) Archive"
+    rejection_reason: Optional[str] = None
+    verified_by: Optional[str] = None
+    verified_at: Optional[datetime] = None
     extractions: List[DocumentExtractionSchema] = []
+    verification_records: List[VerificationRecordSchema] = []
 
     class Config:
         from_attributes = True
@@ -284,11 +428,22 @@ class DocumentSchema(BaseModel):
 class ExtractionCorrectionRequest(BaseModel):
     extraction_id: int
     entity_value: str
+    normalized_value: Optional[str] = None
+    unit: Optional[str] = None
+    verification_status: str = "CORRECTED"  # VERIFIED, CORRECTED, REJECTED
     is_verified: bool = True
     verified_by: str = "Drilling Engineer (OIL-RTDC)"
+    notes: Optional[str] = None
+
+class DocumentVerificationDecisionRequest(BaseModel):
+    decision: str  # APPROVE, REJECT, REQUEST_CORRECTION
+    reviewer_name: str = "Dr. Ananya Dutta (Geoscientist)"
+    notes: Optional[str] = None
+    rejection_reason: Optional[str] = None
 
 class ManualReportCreateRequest(BaseModel):
     well_id: Optional[int] = 2
+    document_title: Optional[str] = "Well Completion & Risk Report"
     filename: str
     doc_type: str = "WCR"  # WCR, DDR, MudLog, DirectionalSurvey
     page_count: Optional[int] = 8
@@ -305,8 +460,34 @@ class ManualReportCreateRequest(BaseModel):
     sop_reference: Optional[str] = "OIL-SOP-DRL-042 Rev.3"
     operational_remarks: Optional[str] = "Pill soaked 4.0 hours, returns restored cleanly."
     raw_text: Optional[str] = None
+    uploaded_by: Optional[str] = "RTDC Lead Engineer"
 
-# Knowledge Graph Schemas
+# ==================== Audit Log Schemas ====================
+class AuditLogSchema(BaseModel):
+    id: int
+    user_id: str
+    user_name: str
+    role: str
+    action: str
+    entity_type: str
+    entity_id: Optional[str] = None
+    before_state: Optional[Dict[str, Any]] = None
+    after_state: Optional[Dict[str, Any]] = None
+    timestamp: datetime
+    reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class AuditLogCreateRequest(BaseModel):
+    action: str
+    entity_type: str
+    entity_id: Optional[str] = None
+    before_state: Optional[Dict[str, Any]] = None
+    after_state: Optional[Dict[str, Any]] = None
+    reason: Optional[str] = None
+
+# ==================== Knowledge Graph Schemas ====================
 class GraphNodeSchema(BaseModel):
     id: str
     label: str
@@ -324,7 +505,7 @@ class KnowledgeGraphResponse(BaseModel):
     nodes: List[GraphNodeSchema]
     edges: List[GraphEdgeSchema]
 
-# Ask NWIS RAG Schemas
+# ==================== Ask NWIS RAG Schemas ====================
 class AskNWISRequest(BaseModel):
     query: str
     active_well_id: Optional[int] = 1

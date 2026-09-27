@@ -48,6 +48,7 @@ class Well(Base):
     alerts = relationship("Alert", back_populates="well", cascade="all, delete-orphan")
     formation_intervals = relationship("WellFormationInterval", back_populates="well", cascade="all, delete-orphan")
     documents = relationship("Document", back_populates="well")
+    depth_readings = relationship("DepthReading", back_populates="well", cascade="all, delete-orphan")
 
 class Borehole(Base):
     __tablename__ = "boreholes"
@@ -91,6 +92,8 @@ class WellFormationInterval(Base):
     base_tvd = Column(Float, nullable=False)
     top_tvdss = Column(Float, nullable=False)
     base_tvdss = Column(Float, nullable=False)
+    verification_status = Column(String(50), default="VERIFIED")  # VERIFIED, UNVERIFIED, ESTIMATED
+    source_document = Column(String(200), nullable=True)
 
     well = relationship("Well", back_populates="formation_intervals")
     formation = relationship("Formation", back_populates="well_intervals")
@@ -117,6 +120,7 @@ class DrillingIncident(Base):
     source_document = Column(String(200), nullable=True)  # WCR, DDR, MudLog
     page_number = Column(Integer, default=1)
     timestamp = Column(String(50), nullable=True)
+    verification_status = Column(String(50), default="VERIFIED")  # VERIFIED, UNVERIFIED, SYNTHETIC
 
     well = relationship("Well", back_populates="incidents")
     formation = relationship("Formation", back_populates="incidents")
@@ -164,6 +168,21 @@ class Telemetry(Base):
 
     well = relationship("Well", back_populates="telemetry_records")
 
+class DepthReading(Base):
+    __tablename__ = "depth_readings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    well_id = Column(Integer, ForeignKey("wells.well_id"), nullable=False)
+    bit_depth = Column(Float, nullable=False)
+    depth_reference = Column(String(50), default="MD")  # MD, TVD, TVDSS
+    depth_unit = Column(String(20), default="m")
+    source_type = Column(String(50), default="MANUAL")  # MANUAL, SIMULATED_TELEMETRY, LIVE_WITSML
+    recorded_by = Column(String(100), default="Drilling Engineer")
+    recorded_at = Column(DateTime, default=datetime.datetime.utcnow)
+    note = Column(String(255), nullable=True)
+
+    well = relationship("Well", back_populates="depth_readings")
+
 class Alert(Base):
     __tablename__ = "alerts"
 
@@ -181,46 +200,109 @@ class Alert(Base):
     evidence = Column(JSON, nullable=False)     # Structured evidence list
     recommended_action = Column(Text, nullable=False)
     mitigation_options = Column(JSON, nullable=True) # Recommended successful mitigations
-    status = Column(String(50), default="ACTIVE")   # ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED
+    status = Column(String(50), default="ACTIVE")   # ACTIVE, ACKNOWLEDGED, RESOLVED, DISMISSED, REVIEWED
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     acknowledged_by = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
+    analysis_method = Column(String(100), default="4-Factor Offset Spatial-Stratigraphic Analysis")
+    analysis_version = Column(String(50), default="v1.4.2")
 
     well = relationship("Well", back_populates="alerts")
+    reviews = relationship("AlertReview", back_populates="alert", cascade="all, delete-orphan")
+
+class AlertReview(Base):
+    __tablename__ = "alert_reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    alert_id = Column(Integer, ForeignKey("alerts.alert_id"), nullable=False)
+    reviewer_id = Column(String(100), nullable=False)
+    reviewer_name = Column(String(100), nullable=False)
+    review_decision = Column(String(50), nullable=False)  # CONFIRMED_RELEVANT, NOT_RELEVANT, FLAGGED_INCORRECT, REVIEWED, ESCALATED
+    comments = Column(Text, nullable=True)
+    reviewed_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    alert = relationship("Alert", back_populates="reviews")
 
 class Document(Base):
     __tablename__ = "documents"
 
     id = Column(Integer, primary_key=True, index=True)
     well_id = Column(Integer, ForeignKey("wells.well_id"), nullable=True)
+    document_title = Column(String(255), nullable=True)
     filename = Column(String(255), nullable=False)
-    doc_type = Column(String(100), default="WCR")  # WCR, DDR, MudLog, DirectionalSurvey, DailyRemark
+    doc_type = Column(String(100), default="WCR")  # WCR, DDR, MudLog, DirectionalSurvey, GeologicalReport
     file_size_bytes = Column(Integer, default=102400)
     upload_timestamp = Column(DateTime, default=datetime.datetime.utcnow)
-    status = Column(String(50), default="PROCESSED")  # UPLOADED, PROCESSING, PROCESSED, REVIEWED
+    status = Column(String(50), default="PROCESSED")  # UPLOADED, PROCESSING, PROCESSED, NEEDS_REVIEW, UNDER_VERIFICATION, VERIFIED, REJECTED, FAILED
     page_count = Column(Integer, default=12)
     raw_text = Column(Text, nullable=True)
     summary = Column(Text, nullable=True)
     extraction_confidence = Column(Float, default=0.94)
+    uploaded_by = Column(String(100), default="Data Ingestion Pipeline")
+    document_version = Column(String(50), default="1.0")
+    document_source = Column(String(100), default="Oil India Limited (OIL) Archive")
+    rejection_reason = Column(Text, nullable=True)
+    verified_by = Column(String(100), nullable=True)
+    verified_at = Column(DateTime, nullable=True)
 
     well = relationship("Well", back_populates="documents")
     extractions = relationship("DocumentExtraction", back_populates="document", cascade="all, delete-orphan")
+    verification_records = relationship("VerificationRecord", back_populates="document", cascade="all, delete-orphan")
 
 class DocumentExtraction(Base):
     __tablename__ = "document_extractions"
 
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    field_group = Column(String(100), default="WELL_METADATA")  # WELL_METADATA, DRILLING_PARAMETERS, GEOLOGICAL_INFO, DRILLING_EVENTS, MITIGATION
     entity_type = Column(String(100), nullable=False)  # WELL_INFO, FORMATION_TOP, CASING, DRILLING_PARAM, HAZARD_EVENT, MITIGATION
     entity_key = Column(String(100), nullable=False)
     entity_value = Column(String(500), nullable=False)
+    normalized_value = Column(String(500), nullable=True)
+    unit = Column(String(50), nullable=True)
     confidence = Column(Float, default=0.92)
     page_number = Column(Integer, default=1)
     source_snippet = Column(Text, nullable=True)
     is_verified = Column(Boolean, default=False)
+    verification_status = Column(String(50), default="NOT_REVIEWED")  # NOT_REVIEWED, VERIFIED, CORRECTED, MISSING, CONFLICTING, REJECTED
     verified_by = Column(String(100), nullable=True)
+    notes = Column(Text, nullable=True)
 
     document = relationship("Document", back_populates="extractions")
+    verification_records = relationship("VerificationRecord", back_populates="extraction", cascade="all, delete-orphan")
+
+class VerificationRecord(Base):
+    __tablename__ = "verification_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    extracted_field_id = Column(Integer, ForeignKey("document_extractions.id"), nullable=True)
+    reviewer_id = Column(String(100), nullable=False)
+    reviewer_name = Column(String(100), nullable=False)
+    original_value = Column(String(500), nullable=True)
+    corrected_value = Column(String(500), nullable=True)
+    review_status = Column(String(50), nullable=False)  # VERIFIED, CORRECTED, REJECTED, APPROVED_DOCUMENT, REJECTED_DOCUMENT
+    review_note = Column(Text, nullable=True)
+    source_page = Column(Integer, default=1)
+    reviewed_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    document = relationship("Document", back_populates="verification_records")
+    extraction = relationship("DocumentExtraction", back_populates="verification_records")
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(100), nullable=False, default="system")
+    user_name = Column(String(100), nullable=False, default="System User")
+    role = Column(String(50), nullable=False, default="SYSTEM")
+    action = Column(String(100), nullable=False)  # LOGIN, LOGOUT, CREATE_WELL, UPDATE_WELL, UPLOAD_DOCUMENT, EXTRACT_DOCUMENT, VERIFY_FIELD, APPROVE_DOCUMENT, REJECT_DOCUMENT, MANUAL_DEPTH_ENTRY, ALERT_REVIEW
+    entity_type = Column(String(100), nullable=False)  # USER, WELL, DOCUMENT, EXTRACTION, DEPTH_READING, ALERT, CONFIG
+    entity_id = Column(String(100), nullable=True)
+    before_state = Column(JSON, nullable=True)
+    after_state = Column(JSON, nullable=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    reason = Column(Text, nullable=True)
 
 class KnowledgeNode(Base):
     __tablename__ = "knowledge_nodes"
