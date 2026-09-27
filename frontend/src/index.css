@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #121416;
+    --bg-surface: #1A1D20;
+    --bg-surface-elevated: #231F20;
+    --bg-surface-card: #22262B;
+    --border-subtle: #2E343A;
+    --border-focus: #ED1C24;
+    --brand-red: #ED1C24;
+    --brand-red-hover: #D01820;
+    --accent-warning: #FFC72C;
+    --accent-success: #27AE60;
+    --accent-info: #2D9CDB;
+    --text-primary: #F5F6F8;
+    --text-secondary: #A0AAB2;
+    --text-muted: #6C7781;
+  }
+
+  html.light {
+    --bg-primary: #F4F6F8;
+    --bg-surface: #FFFFFF;
+    --bg-surface-elevated: #F8FAFC;
+    --bg-surface-card: #FFFFFF;
+    --border-subtle: #E2E8F0;
+    --border-focus: #ED1C24;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Light mode overrides for enterprise UI components */
+html.light body {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+html.light header {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+html.light aside {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+}
+
+html.light main {
+  background-color: #F8FAFC !important;
+}
+
+html.light .bg-\[\#121416\] {
+  background-color: #F8FAFC !important;
+}
+
+html.light .bg-\[\#1A1D20\] {
+  background-color: #FFFFFF !important;
+  border-color: #E2E8F0 !important;
+  color: #0F172A !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html.light .bg-\[\#15181B\] {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+}
+
+html.light .bg-\[\#231F20\] {
+  background-color: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+}
+
+html.light .border-\[\#2E343A\] {
+  border-color: #E2E8F0 !important;
+}
+
+html.light .text-white {
+  color: #0F172A !important;
+}
+
+html.light .text-\[\#F5F6F8\] {
+  color: #0F172A !important;
+}
+
+html.light .text-\[\#A0AAB2\] {
+  color: #64748B !important;
+}
+
+html.light .text-\[\#6C7781\] {
+  color: #94A3B8 !important;
+}
+
+html.light select {
+  color: #0F172A !important;
+  background-color: transparent !important;
+}
+
+html.light select option {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+html.light input[type="text"],
+html.light input[type="number"],
+html.light textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+/* Custom scrollbar for enterprise UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #94A3B8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ED1C24;
+}
+
+/* Radar pulse animation for active drilling lookahead */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.radar-glow {
+  animation: pulse-ring 2.5s infinite ease-in-out;
+}
+
+/* Leaflet theme overrides */
+.leaflet-container {
+  font-family: inherit !important;
+}
+
+html.dark .leaflet-container {
+  background: #15181B !important;
+}
+
+html.light .leaflet-container {
+  background: #E2E8F0 !important;
+}
+
+html.dark .leaflet-popup-content-wrapper {
+  background: #1A1D20 !important;
+  color: #F5F6F8 !important;
+  border: 1px solid #2E343A !important;
+  border-radius: 6px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7) !important;
+}
+
+html.dark .leaflet-popup-tip {
+  background: #1A1D20 !important;
+}
+
+html.light .leaflet-popup-content-wrapper {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+html.light .leaflet-popup-tip {
+  background: #FFFFFF !important;
+}
