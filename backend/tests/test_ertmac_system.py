@@ -1,3 +1,11 @@
+import sys
+from pathlib import Path
+
+# Add backend directory to sys.path
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 import datetime
 from fastapi.testclient import TestClient
 from app.main import app
@@ -53,7 +61,7 @@ def test_wells_management():
     assert len(well_1["boreholes"]) > 0
 
     # 4. Create new well
-    new_uwi = f"IN-TEST-WELL-{int(datetime.datetime.utcnow().timestamp())}"
+    new_uwi = f"IN-TEST-WELL-{int(datetime.datetime.now(datetime.timezone.utc).timestamp())}"
     resp_create = client.post("/api/wells", json={
         "UWI": new_uwi,
         "well_name": "TEST-EXPLORATION-01",
@@ -174,3 +182,23 @@ def test_audit_logs_and_exports():
     csv_resp = client.get("/api/exports/hazards-csv")
     assert csv_resp.status_code == 200
     assert "Incident ID" in csv_resp.text
+
+if __name__ == "__main__":
+    setup_module(None)
+    test_login_flow()
+    print("[PASS] test_login_flow")
+    test_wells_management()
+    print("[PASS] test_wells_management")
+    test_manual_bit_depth_and_geology()
+    print("[PASS] test_manual_bit_depth_and_geology")
+    test_document_verification_workflow()
+    print("[PASS] test_document_verification_workflow")
+    test_proactive_hazard_prediction_and_alert_review()
+    print("[PASS] test_proactive_hazard_prediction_and_alert_review")
+    test_audit_logs_and_exports()
+    print("[PASS] test_audit_logs_and_exports")
+    print("\nAll eRTMAC-NWIS backend tests completed successfully!")
+
+
+
+

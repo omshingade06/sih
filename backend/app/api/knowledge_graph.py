@@ -14,5 +14,5 @@ def get_well_subgraph(well_id: int, db: Session = Depends(get_db)):
 
 @router.get("/full", response_model=KnowledgeGraphResponse)
 def get_full_graph(db: Session = Depends(get_db)):
-    graph = build_well_knowledge_graph(db, well_id=None)
+    graph = build_well_knowledge_graph(db, well_id=3)
     return graph

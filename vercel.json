@@ -4,8 +4,8 @@
   "framework": "vite",
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**",
-      "excludeFiles": "{frontend/**,node_modules/**,**/node_modules/**,.git/**,tests/**,backend/tests/**}"
+      "includeFiles": "backend/app/**",
+      "excludeFiles": "frontend/**"
     }
   },
   "rewrites": [

@@ -1,12 +1,10 @@
 # Vercel Deployment Ignore
 # Prevents bloated serverless function bundles (>225MB limit)
 
-# Frontend node_modules & build assets
+# Node modules & temporary files
 frontend/node_modules/
 node_modules/
-*/node_modules/
-frontend/src/
-frontend/public/
+**/node_modules/
 
 # Git and IDE configs
 .git/
@@ -16,18 +14,19 @@ frontend/public/
 .DS_Store
 Thumbs.db
 
-# Test suites
+# Test suites & fixtures
 tests/
 backend/tests/
 */tests/
 *test*.py
 
-# Python caches and virtual environments
+# Python caches, virtual environments & compiled files
 .venv/
 venv/
 ENV/
 env/
-__pycache__/
+backend/.venv/
+**/__pycache__/
 *.py[cod]
 *.pyc
 *$py.class
@@ -39,6 +38,7 @@ build/
 *.sqlite
 *.sqlite3
 *.db
+backend/ertmac_nwis.db
 
 # Documentation & large assets
 *.md

@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import datetime
 from app.core.database import get_db
-from app.models.entities import Document, DocumentExtraction, Well, VerificationRecord, AuditLog
+from app.models.entities import Document, DocumentExtraction, Well, VerificationRecord, AuditLog, Formation, DrillingIncident, Mitigation
 from app.schemas.schemas import (
     DocumentSchema,
     DocumentExtractionSchema,
@@ -13,6 +13,7 @@ from app.schemas.schemas import (
     VerificationRecordSchema
 )
 from app.services.document_engine import parse_and_extract_document
+from app.services.stratigraphy import calculate_tvdss, calculate_eta_norm
 
 router = APIRouter(prefix="/documents", tags=["Document Intelligence & Verification"])
 
@@ -69,7 +70,7 @@ def list_documents(
 def get_document(doc_id: int, db: Session = Depends(get_db)):
     d = db.query(Document).filter(Document.id == doc_id).first()
     if not d:
-        raise HTTPException(status_code=404, detail="Document not found")
+        raise HTTPException(status_code=404, detail=f"Document {doc_id} not found")
     
     return {
         "id": d.id,
@@ -103,50 +104,55 @@ async def upload_document(
     uploaded_by: Optional[str] = Form("Data Reviewer"),
     db: Session = Depends(get_db)
 ):
+    safe_filename = file.filename or "uploaded_document.pdf"
+    clean_title = document_title or safe_filename.replace(".pdf", "").replace("_", " ").replace("-", " ")
+    clean_doc_type = (doc_type or "WCR").upper()
+
     # Parse and extract
     extraction_res = parse_and_extract_document(
-        filename=file.filename,
-        doc_type=doc_type
+        filename=safe_filename,
+        doc_type=clean_doc_type
     )
 
     doc = Document(
         well_id=well_id,
-        document_title=document_title or file.filename.replace(".pdf", "").replace("_", " "),
-        filename=file.filename,
-        doc_type=doc_type.upper(),
+        document_title=clean_title,
+        filename=safe_filename,
+        doc_type=clean_doc_type,
         file_size_bytes=1024000,
         status="NEEDS_REVIEW",
-        page_count=extraction_res["page_count"],
-        summary=extraction_res["summary"],
-        extraction_confidence=extraction_res["extraction_confidence"],
-        uploaded_by=uploaded_by,
+        page_count=extraction_res.get("page_count", 10),
+        summary=extraction_res.get("summary", ""),
+        extraction_confidence=extraction_res.get("extraction_confidence", 0.92),
+        uploaded_by=uploaded_by or "Data Reviewer",
         document_version="1.0",
-        document_source="Oil India Limited (OIL) Digital Archive"
+        document_source="Oil India Limited (OIL) Digital Archive",
+        upload_timestamp=datetime.datetime.now(datetime.timezone.utc)
     )
     db.add(doc)
     db.flush()
 
-    for ext in extraction_res["extractions"]:
+    for ext in extraction_res.get("extractions", []):
         # Assign field_group based on entity_type
         f_group = "WELL_METADATA"
-        if ext["entity_type"] in ["DRILLING_PARAM", "CASING"]:
+        if ext.get("entity_type") in ["DRILLING_PARAM", "CASING"]:
             f_group = "DRILLING_PARAMETERS"
-        elif ext["entity_type"] in ["FORMATION_TOP"]:
+        elif ext.get("entity_type") in ["FORMATION_TOP"]:
             f_group = "GEOLOGICAL_INFO"
-        elif ext["entity_type"] in ["HAZARD_EVENT"]:
+        elif ext.get("entity_type") in ["HAZARD_EVENT"]:
             f_group = "DRILLING_EVENTS"
-        elif ext["entity_type"] in ["MITIGATION"]:
+        elif ext.get("entity_type") in ["MITIGATION"]:
             f_group = "MITIGATION"
 
         d_ext = DocumentExtraction(
             document_id=doc.id,
             field_group=f_group,
-            entity_type=ext["entity_type"],
-            entity_key=ext["entity_key"],
-            entity_value=ext["entity_value"],
-            confidence=ext["confidence"],
-            page_number=ext["page_number"],
-            source_snippet=ext["source_snippet"],
+            entity_type=ext.get("entity_type", "WELL_INFO"),
+            entity_key=ext.get("entity_key", "Field"),
+            entity_value=ext.get("entity_value", ""),
+            confidence=ext.get("confidence", 0.90),
+            page_number=ext.get("page_number", 1),
+            source_snippet=ext.get("source_snippet", ""),
             is_verified=False,
             verification_status="NOT_REVIEWED"
         )
@@ -160,17 +166,24 @@ async def upload_document(
         action="UPLOAD_DOCUMENT",
         entity_type="DOCUMENT",
         entity_id=str(doc.id),
-        after_state={"filename": doc.filename, "doc_type": doc.doc_type, "extractions_count": len(extraction_res["extractions"])},
-        reason=f"Uploaded and parsed {doc.filename} ({len(extraction_res['extractions'])} structured fields extracted)"
+        after_state={"filename": doc.filename, "doc_type": doc.doc_type, "extractions_count": len(extraction_res.get("extractions", []))},
+        reason=f"Uploaded and parsed {doc.filename} ({len(extraction_res.get('extractions', []))} structured fields extracted)",
+        timestamp=datetime.datetime.now(datetime.timezone.utc)
     )
     db.add(audit)
     db.commit()
     db.refresh(doc)
     
+    well_name = "OIL Archive Well"
+    if doc.well_id:
+        w = db.query(Well).filter(Well.well_id == doc.well_id).first()
+        if w:
+            well_name = w.well_name
+
     return {
         "id": doc.id,
         "well_id": doc.well_id,
-        "well_name": doc.well.well_name if doc.well else "Uploaded Well",
+        "well_name": well_name,
         "document_title": doc.document_title,
         "filename": doc.filename,
         "doc_type": doc.doc_type,
@@ -212,6 +225,7 @@ def correct_extraction(
         ext.notes = req.notes
 
     # Create VerificationRecord
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
     v_rec = VerificationRecord(
         document_id=ext.document_id,
         extracted_field_id=ext.id,
@@ -222,7 +236,7 @@ def correct_extraction(
         review_status=req.verification_status,
         review_note=req.notes or f"Field {ext.entity_key} corrected from '{old_val}' to '{req.entity_value}'",
         source_page=ext.page_number,
-        reviewed_at=datetime.datetime.utcnow()
+        reviewed_at=now_utc
     )
     db.add(v_rec)
 
@@ -236,7 +250,8 @@ def correct_extraction(
         entity_id=str(ext.id),
         before_state={"value": old_val},
         after_state={"value": req.entity_value, "status": req.verification_status},
-        reason=f"Corrected extracted value for {ext.entity_key}"
+        reason=f"Corrected extracted value for {ext.entity_key}",
+        timestamp=now_utc
     )
     db.add(audit)
     db.commit()
@@ -259,24 +274,27 @@ def document_verification_decision(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    if req.decision.upper() == "APPROVE":
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    decision_up = req.decision.upper()
+
+    if decision_up == "APPROVE":
         doc.status = "VERIFIED"
         doc.verified_by = req.reviewer_name
-        doc.verified_at = datetime.datetime.utcnow()
+        doc.verified_at = now_utc
         doc.rejection_reason = None
         # Mark all extractions as verified
         for ext in doc.extractions:
             ext.is_verified = True
             ext.verification_status = "VERIFIED"
             ext.verified_by = req.reviewer_name
-    elif req.decision.upper() == "REJECT":
+    elif decision_up == "REJECT":
         if not req.rejection_reason:
             raise HTTPException(status_code=400, detail="Rejection reason is mandatory when rejecting a document.")
         doc.status = "REJECTED"
         doc.rejection_reason = req.rejection_reason
         doc.verified_by = req.reviewer_name
-        doc.verified_at = datetime.datetime.utcnow()
-    elif req.decision.upper() == "REQUEST_CORRECTION":
+        doc.verified_at = now_utc
+    elif decision_up in ["REQUEST_CORRECTION", "CORRECTION"]:
         doc.status = "NEEDS_REVIEW"
         doc.rejection_reason = req.notes or "Corrections requested by reviewer"
 
@@ -288,10 +306,10 @@ def document_verification_decision(
         reviewer_name=req.reviewer_name,
         original_value=None,
         corrected_value=None,
-        review_status=f"DOCUMENT_{req.decision.upper()}",
+        review_status=f"DOCUMENT_{decision_up}",
         review_note=req.notes or req.rejection_reason or f"Document {req.decision.lower()}ed by reviewer",
         source_page=1,
-        reviewed_at=datetime.datetime.utcnow()
+        reviewed_at=now_utc
     )
     db.add(v_rec)
 
@@ -300,11 +318,12 @@ def document_verification_decision(
         user_id="reviewer",
         user_name=req.reviewer_name,
         role="GEOLOGIST",
-        action=f"{req.decision.upper()}_DOCUMENT",
+        action=f"{decision_up}_DOCUMENT",
         entity_type="DOCUMENT",
         entity_id=str(doc.id),
         after_state={"status": doc.status, "reviewer": req.reviewer_name},
-        reason=req.notes or req.rejection_reason or f"Reviewer {req.decision.lower()}ed document {doc.filename}"
+        reason=req.notes or req.rejection_reason or f"Reviewer {req.decision.lower()}ed document {doc.filename}",
+        timestamp=now_utc
     )
     db.add(audit)
     db.commit()
@@ -325,6 +344,7 @@ def create_manual_report(
 ):
     well = db.query(Well).filter(Well.well_id == req.well_id).first() if req.well_id else None
     w_name = well.well_name if well else "OIL Offset Well"
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
     
     # 1. Create Document
     doc_summary = req.summary or (
@@ -346,7 +366,8 @@ def create_manual_report(
         document_version="1.0",
         document_source="Manual Engineer Submission",
         verified_by=req.uploaded_by or "Drilling Engineer",
-        verified_at=datetime.datetime.utcnow()
+        verified_at=now_utc,
+        upload_timestamp=now_utc
     )
     db.add(doc)
     db.flush()
@@ -376,10 +397,9 @@ def create_manual_report(
         db.add(d_ext)
 
     # 3. If hazard is provided, link to DrillingIncident & Mitigation
-    from app.models.entities import Formation, DrillingIncident, Mitigation
-    from app.services.stratigraphy import calculate_tvdss, calculate_eta_norm
-
-    form_obj = db.query(Formation).filter(Formation.name.ilike(f"%{req.formation_name}%")).first()
+    form_obj = None
+    if req.formation_name:
+        form_obj = db.query(Formation).filter(Formation.name.ilike(f"%{req.formation_name}%")).first()
     if not form_obj:
         form_obj = db.query(Formation).first()
 
@@ -403,7 +423,7 @@ def create_manual_report(
             description=req.operational_remarks or f"Manual report incident: {req.hazard_type} in {req.formation_name}.",
             source_document=doc.filename,
             page_number=3,
-            timestamp="2026-09-26",
+            timestamp=datetime.date.today().isoformat(),
             verification_status="VERIFIED"
         )
         db.add(inc)
@@ -430,7 +450,8 @@ def create_manual_report(
         entity_type="DOCUMENT",
         entity_id=str(doc.id),
         after_state={"filename": doc.filename, "hazard": req.hazard_type, "well": w_name},
-        reason=f"Created manual report and linked incident to {w_name}"
+        reason=f"Created manual report and linked incident to {w_name}",
+        timestamp=now_utc
     )
     db.add(audit)
     db.commit()
@@ -458,3 +479,28 @@ def create_manual_report(
         "extractions": doc.extractions,
         "verification_records": doc.verification_records
     }
+
+@router.delete("/{doc_id}")
+def delete_document(doc_id: int, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    doc_name = doc.filename
+    db.delete(doc)
+
+    audit = AuditLog(
+        user_id="reviewer",
+        user_name="System Reviewer",
+        role="ADMIN",
+        action="DELETE_DOCUMENT",
+        entity_type="DOCUMENT",
+        entity_id=str(doc_id),
+        reason=f"Deleted document {doc_name}",
+        timestamp=datetime.datetime.now(datetime.timezone.utc)
+    )
+    db.add(audit)
+    db.commit()
+
+    return {"status": "success", "message": f"Document {doc_id} deleted successfully"}
+
